@@ -6,7 +6,8 @@
 2. Discord GUild ID
 3. PokerNow Bot ID
 4. Unbelievabaot API key https://unbelievaboat.com/api/docs
-5. Python3
+5. Bot user will need permissions to manage money in Unbelieveaboat & with the PokerNow bot
+6. Python3
 
 ## Getting started
 
