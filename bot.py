@@ -68,6 +68,7 @@ async def on_message(message):
         cost = float(amount//2.00)
         #if the user doesnt have enough money to buy in return
         if uMoney < cost:
+            print("User {} does not have enough money to buy in".format(message.author.name))
             await message.channel.send("You don't have enough money to buy in")
             return
         else:
