@@ -10,6 +10,9 @@ import os
 from typing import cast
 
 from requests.models import CaseInsensitiveDict
+from discord.utils import get
+from discord.ext import tasks, commands
+
 import requests
 import discord
 import json
@@ -31,9 +34,11 @@ intents.messages=True
 client = discord.Client(intents=intents)
 headers = {'Authorization': unbKey}
 
+
 #set up the pokerbot to be called on new messages
 @client.event
 async def on_message(message):
+    botChannel = client.get_channel(int(os.getenv('BOT_CHANNEL')))
     #don't respond to yourself, bot
     if message.author == client.user:
         return
@@ -41,6 +46,7 @@ async def on_message(message):
     msg = message.content.lower()
     #if the message is a pokerbot command
     if "!buyin" in msg:
+        print(botChannel)
         #grab the user's id
         aID = str(message.author.id)
         #strip the command from the message
@@ -70,7 +76,7 @@ async def on_message(message):
             #if the user has enough money, send buyin message and subtract the cost from their balance
             print("buyin " + message.author.name + " for " + str(amount))
             mes = "!pac {0.author.mention} {1}".format(message, amount)
-            send = await message.channel.send(mes)
+            send = await botChannel.send(mes)
             nCost = '-' + str(int(cost))
             builder = {'cash': nCost}
             jsonString = json.dumps(builder, indent=4)
@@ -84,7 +90,7 @@ async def on_message(message):
         url = unbUrl + aID
         #send message
         mes = "!prc {0.author.mention} {1}".format(message, amount)
-        send = await message.channel.send(mes)
+        send = await botChannel.channel.send(mes)
 
         #heres the fun part.  since pokernow bot edits its response to the user, we need to grab the response and wait for the actual 
         #response to come back.  this is a bit of a hack, but it works.  the response is then parsed to confirm the user has enough chips
