@@ -46,7 +46,6 @@ async def on_message(message):
     msg = message.content.lower()
     #if the message is a pokerbot command
     if "!buyin" in msg:
-        print(botChannel)
         #grab the user's id
         aID = str(message.author.id)
         #strip the command from the message
@@ -62,7 +61,6 @@ async def on_message(message):
         #set up the request to the Unbelievaboat API
         url = unbUrl + aID
         r = requests.get(url, headers=headers)
-        print(r.text)
         json_data = json.loads(r.text)
         strCash = json_data['cash']
         #convert the cash to an float and set the value of chips
@@ -109,7 +107,6 @@ async def on_message(message):
                     payJson = json.dumps(payBuilder, indent=4)
                     rakeJson = json.dumps(rakeBuilder, indent=4)
                     requestPay = requests.patch(url, headers=headers, data=payJson)
-                    print(pokerbotURL)
                     requestRake = requests.patch(pokerbotURL, headers=headers, data=rakeJson)
                 elif "this user only has" in str(edit):
                     print(message.author.name + " tried to cashout but they only have " + str(amount))
