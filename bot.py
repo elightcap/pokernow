@@ -90,7 +90,7 @@ async def on_message(message):
         url = unbUrl + aID
         #send message
         mes = "!prc {0.author.mention} {1}".format(message, amount)
-        send = await botChannel.channel.send(mes)
+        send = await botChannel.send(mes)
 
         #heres the fun part.  since pokernow bot edits its response to the user, we need to grab the response and wait for the actual 
         #response to come back.  this is a bit of a hack, but it works.  the response is then parsed to confirm the user has enough chips
