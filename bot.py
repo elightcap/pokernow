@@ -13,26 +13,28 @@ from requests.models import CaseInsensitiveDict
 from discord.utils import get
 from discord.ext import tasks, commands
 
+import random
 import requests
 import discord
 import json
+import aiocron
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import mysql.connector as database
 
 load_dotenv()
 
 #set static variables, mostly loaded from .env file
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+dbUser = os.getenv('DB_USER')
+dbPass = os.getenv('DB_PASS')
 unbKey = os.getenv('UNB_KEY')
 pokerBotID = os.getenv('POKER_BOT_ID')
-unbUrl = 'https://unbelievaboat.com/api/v1/guilds/{}/users/'.format(GUILD)
-pokerbotURL = unbUrl + pokerBotID
-intents = discord.Intents.default()
-intents.members = True
-intents.messages=True
-client = discord.Client(intents=intents)
+unbUrl = 'https://unbelievaboat.com/api/v1/'
 headers = {'Authorization': unbKey}
+client = discord.Client()
+ticketCost = float(500)
 
 
 #set up the pokerbot to be called on new messages
@@ -73,7 +75,7 @@ async def on_message(message):
             return
         else:
             #if the user has enough money, send buyin message and subtract the cost from their balance
-            print("buyin " + message.author.name + " for " + str(amount))
+            print("buyin " + message.author.name + " for " + strbest(amount))
             mes = "!pac {0.author.mention} {1}".format(message, amount)
             send = await botChannel.send(mes)
             nCost = '-' + str(int(cost))
@@ -81,7 +83,7 @@ async def on_message(message):
             jsonString = json.dumps(builder, indent=4)
             rp = requests.patch(url, headers=headers, data=jsonString)
     
-    if "!cashout" in msg:
+    elif "!cashout" in msg:
         #same as above but for cashout
         aID = str(message.author.id)
         sAmount = msg.replace("!cashout", "")
@@ -99,7 +101,7 @@ async def on_message(message):
             msgData = edit.data
             editID = str(msgData['author']['id'])
             if editID == pokerBotID:
-                if "done! I removed" in str(edit):
+                if "done! I removed" in str(seedit):
                     print("cashout " + message.author.name + " for " + str(amount))
                     payout = str((amount//2)*.9)
                     rake = str((amount//2)*.1)
@@ -112,5 +114,58 @@ async def on_message(message):
                 elif "this user only has" in str(edit):
                     print(message.author.name + " tried to cashout but they only have " + str(amount))
                     await message.channel.send("You can't cashout more than you have")
+    
+    elif "!buyticket" in msg:
+        aID = str(message.author.id)
+        #set up the request to the Unbelievaboat API
+        url = unbUrl + aID
+        r = requests.get(url, headers=headers)
+        json_data = json.loads(r.text)
+        strCash = json_data['cash']
+        #convert the cash to an float and set the value of chips
+        uMoney = float(strCash)
+        if uMoney < ticketCost:
+            print("User {} does not have enough money to buy a ticket".format(message.author.name))
+            await message.channel.send("You don't have enough money to buy a ticket")
+            return
+        else:
+            try:
+                connection = database.connect(
+                    user=dbUser,
+                    password=dbPass,
+                    host='localhost',
+                    database='pokerDB'
+                )
+                cursor = connection.cursor(buffered=True)
+                statement = "INSERT INTO tickets (userID) VALUES (%s)"
+                data = (aID)
+                cursor.execute(statement, data)
+                connection.commit()
+                print("User {} bought a ticket".format(message.author.name))
+            except database.Error as e:
+                print(e)
+
+@aiocron.crontab('* */1 * * *')
+async def lottery_draw():
+    try:
+        connection = database.connect(
+            user=dbUser,
+            password=dbPass,
+            host='localhost',
+            database='pokerDB'
+        )
+        cursor = connection.cursor(buffered=True)
+        statement = "SELECT * FROM tickets"
+        cursor.execute(statement)
+        rows = cursor.fetchall()
+        if rows:
+            count = rows.count()
+            winner = random.randrange(0, count)
+            winnerID = rows[winner][0]
+            print("The winner is " + str(winnerID))
+            url = unbUrl + winnerID
+            
+    except database.Error as e:
+        print(e)
 
 client.run(TOKEN)
